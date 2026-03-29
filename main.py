@@ -286,7 +286,7 @@ class PimengBlacklistPlugin(Star):
         time_left = next_sync - datetime.now()
         
         yield event.plain_result(
-            f"☁️ 皮梦云黑 v{__version__}\n"
+            f"皮梦云黑库 v{__version__}\n"
             f"━━━━━━━━━━━━━━\n"
             f"用户黑名单: {len(self.user_blacklist)} 用户\n"
             f"群组黑名单: {len(self.group_blacklist)} 群组\n"
@@ -312,30 +312,43 @@ class PimengBlacklistPlugin(Star):
         )
     
     @filter.command("bl_check")
-    async def cmd_check(self, event: AstrMessageEvent, target: str = None):
+    async def cmd_check(self, event: AstrMessageEvent, target: str = None, user_type: str = "user"):
         '''检查状态'''
         # 参数验证：如果提供了target，转换为字符串后再验证
         if target is not None:
             target = str(target)
             if not target.isdigit():
-                yield event.plain_result("❌ 插件 pimeng_blacklist: 参数错误。QQ号必须是数字。该指令完整参数: target(str)=")
+                yield event.plain_result("❌ 插件 pimeng_blacklist: 参数错误。QQ号必须是数字。该指令完整参数: target(str)=,user_type(str)=user")
                 return
+        
+        # 验证 user_type 参数
+        if user_type not in ["user", "group"]:
+            yield event.plain_result("❌ 插件 pimeng_blacklist: 参数错误。user_type 必须是 'user' 或 'group'。该指令完整参数: target(str)=,user_type(str)=user")
+            return
         
         # 查询前先更新云黑库
         await self._sync_blacklist()
         
-        user_id = str(target or event.get_sender_id())
+        target_id = str(target or event.get_sender_id())
         
-        # 检查用户黑名单（仅拦截用户）
-        if user_id in self.user_blacklist:
-            data = self.user_blacklist[user_id]
+        # 根据类型选择黑名单
+        if user_type == "group":
+            blacklist = self.group_blacklist
+            type_name = "群组"
+        else:
+            blacklist = self.user_blacklist
+            type_name = "用户"
+        
+        # 检查本地黑名单
+        if target_id in blacklist:
+            data = blacklist[target_id]
             level = data.get("level", 1)
-            level_names = {1: "Minor", 2: "General", 3: "Platform", 4: "Severe"}
+            level_names = {1: "轻微", 2: "一般", 3: "平台", 4: "严重"}
             
             yield event.plain_result(
                 f"⚠️ 黑名单检查 (本地)\n"
                 f"━━━━━━━━━━━━━━\n"
-                f"用户: {user_id}\n"
+                f"{type_name}: {target_id}\n"
                 f"状态: 🚫 已拉黑\n"
                 f"等级: {level} ({level_names.get(level, '未知')})\n"
                 f"原因: {data.get('reason', '未知')}\n"
@@ -344,13 +357,13 @@ class PimengBlacklistPlugin(Star):
             )
         else:
             # 实时检查
-            result = await self._api_check(user_id)
+            result = await self._api_check(target_id, user_type)
             
             if result.get("in_blacklist"):
                 data = result.get("data", {})
                 yield event.plain_result(
                     f"⚠️ 黑名单检查 (实时)\n"
-                    f"用户: {user_id}\n"
+                    f"{type_name}: {target_id}\n"
                     f"状态: 🚫 已拉黑\n"
                     f"等级: {data.get('level', 1)}\n"
                     f"⚠️ 不在本地缓存，将在一段时间内同步"
@@ -358,7 +371,7 @@ class PimengBlacklistPlugin(Star):
             else:
                 yield event.plain_result(
                     f"✅ 黑名单检查\n"
-                    f"用户: {user_id}\n"
+                    f"{type_name}: {target_id}\n"
                     f"状态: 未被拉黑"
                 )
     
@@ -533,11 +546,11 @@ class PimengBlacklistPlugin(Star):
         is_op = hasattr(event, 'is_admin') and event.is_admin()
         
         msg = (
-            f"🛡️ 皮梦云黑 v{__version__}\n"
+            f"🛡️皮梦云黑库 v{__version__}\n"
             f"━━━━━━━━━━━━━━\n"
             f"📋 命令列表\n"
             f"━━━━━━━━━━━━━━\n"
-            f"/bl_check [target(str)=] - 检查状态\n"
+            f"/bl_check [target(str)=] [user_type(str)=user] - 检查状态\n"
         )
         
         if is_op:
@@ -554,7 +567,8 @@ class PimengBlacklistPlugin(Star):
             f"━━━━━━━━━━━━━━\n"
             f"📝 参数说明\n"
             f"━━━━━━━━━━━━━━\n"
-            f"• user_id: QQ号（必须为数字）\n"
+            f"• target: QQ号或群号（必须为数字）\n"
+            f"• user_type: 类型 'user'(用户) 或 'group'(群组)，默认 user\n"
             f"• reason: 原因（必填）\n"
             f"• level: 等级 1-3（默认1，等级4需在管理面板操作）\n"
             f"• page: 页码（必须为正整数，默认1）\n"
@@ -611,14 +625,14 @@ class PimengBlacklistPlugin(Star):
         except Exception as e:
             self.logger.error(f"Quit Group Failed | Group: {group_id} | Error: {e}")
     
-    async def _api_check(self, user_id: str) -> dict:
+    async def _api_check(self, user_id: str, user_type: str = "user") -> dict:
         return await self._api_request("POST", "/api/bot/check", {
             "user_id": user_id,
-            "user_type": "user"
+            "user_type": user_type
         })
     
     async def _api_request(self, method: str, endpoint: str, data: dict = None) -> dict:
-        """使用 http.client 发送请求"""
+        """使用 http.client 发送请求，失败时自动重试一次"""
         
         def _sync_request():
             conn = http.client.HTTPSConnection("cloudblack-api.07210700.xyz")
@@ -654,16 +668,47 @@ class PimengBlacklistPlugin(Star):
             finally:
                 conn.close()
         
-        # 在异步环境中运行同步的 http.client 请求
-        try:
-            return await asyncio.wait_for(
-                asyncio.to_thread(_sync_request),
-                timeout=self.request_timeout
-            )
-        except asyncio.TimeoutError:
-            return {"success": False, "message": f"请求超时 ({self.request_timeout}秒)"}
-        except Exception as e:
-            return {"success": False, "message": str(e)}
+        # 在异步环境中运行同步的 http.client 请求，最多重试一次
+        max_retries = 2
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(_sync_request),
+                    timeout=self.request_timeout
+                )
+                
+                # 如果成功，直接返回
+                if result.get("success"):
+                    return result
+                
+                # 如果失败，记录错误并继续重试
+                last_error = result.get("message", "未知错误")
+                self.logger.warning(f"API请求失败 (尝试 {attempt + 1}/{max_retries}): {last_error}")
+                
+                # 如果不是最后一次尝试，等待1秒后重试
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)
+                    
+            except asyncio.TimeoutError:
+                last_error = f"请求超时 ({self.request_timeout}秒)"
+                self.logger.warning(f"API请求超时 (尝试 {attempt + 1}/{max_retries})")
+                
+                # 如果不是最后一次尝试，等待1秒后重试
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)
+                    
+            except Exception as e:
+                last_error = str(e)
+                self.logger.warning(f"API请求异常 (尝试 {attempt + 1}/{max_retries}): {last_error}")
+                
+                # 如果不是最后一次尝试，等待1秒后重试
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)
+        
+        # 两次都失败，返回错误
+        return {"success": False, "message": f"API请求失败 (已重试1次): {last_error}"}
     
     async def _kick_member(self, group_id: str, user_id: str):
         """踢出成员"""
