@@ -12,7 +12,7 @@ from .cache import BlacklistCache
 from .service import BlacklistService
 from .handler import EventHandler
 
-__version__ = "2.9.1"
+__version__ = "2.9.3"
 
 # 常量定义
 LEVEL_NAMES = {1: "轻微", 2: "一般", 3: "平台", 4: "严重"}
@@ -254,21 +254,17 @@ class PimengBlacklistPlugin(Star):
         target_id = str(target or event.get_sender_id())
         
         if user_type is None:
-            results = []
             query_user_id = str(event.get_sender_id())
-            
-            can_query = self.service.can_query_api(query_user_id)
-            
+
+            if not self.service.can_query_api(query_user_id):
+                yield event.plain_result("⏳ 查询限流中，请稍后再试")
+                return
+
             user_result = await self._query_blacklist(target_id, "user", check_rate_limit=False)
             group_result = await self._query_blacklist(target_id, "group", check_rate_limit=False)
-            
-            results.append(f"[用户]\n{user_result}")
-            results.append(f"[群组]\n{group_result}")
-            
-            if can_query:
-                self.service.update_query_time(query_user_id)
-            
-            yield event.plain_result("\n\n".join(results))
+            self.service.update_query_time(query_user_id)
+
+            yield event.plain_result(f"[用户]\n{user_result}\n\n[群组]\n{group_result}")
             return
         
         if user_type not in ("user", "group"):
