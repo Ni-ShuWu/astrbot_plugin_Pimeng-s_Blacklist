@@ -23,6 +23,15 @@
 - **同步锁**：防止并发同步冲突
 - **同步回滚**：同步失败自动恢复旧数据
 
+## 插件互调（双向通信）
+
+本插件与 **AI 审核插件**（`astrbot_plugin_ai_review`）通过 AstrBot 插件实例互调实现双向通信。两插件均采用弱依赖设计，任意一方未加载 / 不可用时另一方自动跳过，互不影响正常运行：
+
+- **AI 审核 → 皮梦云（同步拉黑）**：AI 审核通过 `context.get_all_stars()` 发现本插件 `star_cls` 实例，调用 `api.add_to_blacklist(user_id, "user", reason, level)` 将审核确认的违规用户同步加入云黑库。
+- **皮梦云 → AI 审核（查询黑名单）**：AI 审核在审核前调用 `service.get_user_data`（本地同步缓存，快速且不触发限流）优先查询，未命中时回退 `api.check_blacklist`（云端实时查询）；命中则在 Prompt 中注明「该用户已在云黑库（等级/原因）」并从严处理。
+
+> 本插件侧无需任何额外配置，与 AI 审核插件同时加载即可自动建立互调；AI 审核侧需在配置中开启 `enable_blacklist_check`。
+
 ## 安装
 
 将本插件放入 AstrBot 的 `addons/` 目录即可。

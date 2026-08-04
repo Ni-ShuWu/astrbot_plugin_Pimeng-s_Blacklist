@@ -1,6 +1,6 @@
 name: "astrbot_plugin_pimeng_blacklist"
-version: "2.9.3"
-description: "基于皮梦云黑库接入插件 - 支持查询/添加/删除/同步/自动踢出黑名单成员"
+version: "3.0.0"
+description: "基于皮梦云黑库接入插件 - 支持查询/添加/删除/同步/自动踢出黑名单成员；支持与 AI 审核插件双向互调（审核结果同步拉黑、审核前查询黑库加重判定）"
 author: "N(Ni-ShuWu),P(Pimeng's)"
 license: "GPL-3.0"
 homepage: "https://github.com/Ni-ShuWu/astrbot_plugin_pimeng_blacklist"
