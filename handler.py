@@ -1,4 +1,4 @@
-"""事件处理模块 - 处理消息拦截、踢人权限检查等事件"""
+"""Event handling module - handles message interception, kick permission checks, etc."""
 
 import re
 from datetime import datetime
@@ -11,7 +11,7 @@ from .cache import BlacklistCache
 
 
 class EventHandler:
-    """事件处理器"""
+    """Event handler."""
     
     def __init__(self, service: BlacklistService, cache: BlacklistCache, enable_auto_kick: bool, enable_quit_on_admin_join: bool, enable_message_intercept: bool, logger):
         self.service = service
@@ -26,7 +26,7 @@ class EventHandler:
         self.quit_groups: Set[str] = set()
     
     async def handle_message(self, event: AstrMessageEvent, context) -> Optional[str]:
-        """处理消息事件 - 返回需要发送的消息，或None表示不发送"""
+        """Handle message event - return message to send, or None if not sending."""
         user_id = str(event.get_sender_id())
         
         is_group = hasattr(event, 'get_group_id') and event.get_group_id() is not None
@@ -46,11 +46,11 @@ class EventHandler:
 
                 now = datetime.now()
                 last_warn = self.cache.get_private_warn_time(user_id)
-
-                reason = user_data.get('reason', '未知') if user_data else '未知'
+                
+                reason = user_data.get('reason', 'Unknown') if user_data else 'Unknown'
                 added_by = user_data.get('added_by', None) if user_data else None
-                added_by_line = f"\n添加者：{added_by}" if added_by else ""
-
+                added_by_line = f"\nAdded by: {added_by}" if added_by else ""
+                
                 should_warn = False
                 if is_wake_up:
                     if last_warn is None or last_warn.date() != now.date():
@@ -62,12 +62,12 @@ class EventHandler:
 
                 if should_warn:
                     return (
-                        f"⚠️ 您已被列入云黑名单。\n"
+                        f"⚠️ You are blacklisted.\n"
                         f"━━━━━━━━━━━━━━\n"
-                        f"违规等级: {level}\n"
-                        f"原因: {reason}{added_by_line}\n"
+                        f"Violation level: {level}\n"
+                        f"Reason: {reason}{added_by_line}\n"
                         f"━━━━━━━━━━━━━━\n"
-                        f"详情与申诉: https://云黑.皮梦.wtf"
+                        f"Details & appeal: https://云黑.皮梦.wtf"
                     )
 
                 return None
@@ -89,9 +89,9 @@ class EventHandler:
                 user_data = self.service.get_user_data(user_id)
                 user_level = user_data.get("level", 1) if user_data else 1
                 
-                reason = user_data.get('reason', '未知') if user_data else '未知'
+                reason = user_data.get('reason', 'Unknown') if user_data else 'Unknown'
                 added_by = user_data.get('added_by', None) if user_data else None
-                added_by_line = f"\n添加者：{added_by}" if added_by else ""
+                added_by_line = f"\nAdded by: {added_by}" if added_by else ""
                 
                 if self.enable_auto_kick and user_level >= 3:
                     can_kick = await self._check_kick_permission(event, group_id, user_id)
@@ -101,11 +101,11 @@ class EventHandler:
                         if kicked:
                             self.logger.info(f"Kicked blacklisted user | User: {user_id} | Level: {user_level} | Group: {group_id}")
                             return (
-                                f"⚠️ 已踢出云黑用户\n"
+                                f"⚠️ Kicked blacklisted user\n"
                                 f"━━━━━━━━━━━━━━\n"
-                                f"用户：{user_id}\n"
-                                f"等级：{user_level}\n"
-                                f"原因：{reason}{added_by_line}"
+                                f"User: {user_id}\n"
+                                f"Level: {user_level}\n"
+                                f"Reason: {reason}{added_by_line}"
                             )
 
                 # 1级不进行拦截输出，2~4级才拦截并提示
@@ -116,21 +116,21 @@ class EventHandler:
                     event.stop_event()
                     self.logger.info(f"Intercepted blacklisted user | User: {user_id} | Level: {user_level} | Group: {group_id}")
                     return (
-                        f"⚠️ 云黑用户已被拦截\n"
+                        f"⚠️ Blacklisted user intercepted\n"
                         f"━━━━━━━━━━━━━━\n"
-                        f"用户：{user_id}\n"
-                        f"等级：{user_level}\n"
-                        f"原因：{reason}{added_by_line}"
+                        f"User: {user_id}\n"
+                        f"Level: {user_level}\n"
+                        f"Reason: {reason}{added_by_line}"
                     )
         
         return None
     
     async def handle_member_join(self, event: AstrMessageEvent, context) -> bool:
-        """处理成员加入群组事件 - 返回True表示处理了事件
+        """Handle member join group event - return True if event was handled.
         
-        处理两种类型的加入事件：
-        1. Bot加入群聊：检查群组是否在黑名单中，如果是则Bot退群
-        2. 普通成员加入群聊：检查成员是否在黑名单中，如果是且等级≥3，则尝试踢出
+        Handles two types of join events:
+        1. Bot joins group: Check if group is blacklisted, if so bot leaves
+        2. Regular member joins group: Check if member is blacklisted, if level >= 3 try to kick
         """
         group_id = str(event.get_group_id())
         message_str = getattr(event, 'message_str', '') or ''
@@ -147,7 +147,7 @@ class EventHandler:
         joined_user_id = self._extract_user_id_from_message(message_str)
         
         if not joined_user_id:
-            self.logger.debug(f"无法从消息中提取用户ID: {message_str}")
+            self.logger.debug(f"Failed to extract user ID from message: {message_str}")
             return False
         
         is_bot_join = self._is_bot_join_message(event, joined_user_id)
@@ -186,12 +186,12 @@ class EventHandler:
         return False
     
     def _extract_user_id_from_message(self, message_str: str) -> Optional[str]:
-        """从入群消息中提取用户ID
+        """Extract user ID from join message.
         
-        改进的提取逻辑：
-        1. 优先匹配"用户123456"格式
-        2. 验证提取的数字是否在合理范围内
-        3. 避免误匹配消息中其他位置的数字
+        Improved extraction logic:
+        1. Prioritize matching "user123456" format
+        2. Validate extracted number is within reasonable range
+        3. Avoid false matches with other numbers in message
         """
         if not message_str:
             return None
@@ -226,11 +226,11 @@ class EventHandler:
         return None
     
     def _is_valid_qq_number(self, qq: str) -> bool:
-        """验证QQ号是否有效
+        """Validate QQ number.
         
-        QQ号特点：
-        1. 5-10位数字
-        2. 最小QQ号约为10000
+        QQ number characteristics:
+        1. 5-10 digits
+        2. Minimum QQ number is approximately 10000
         """
         if not qq or len(qq) < 5 or len(qq) > 10:
             return False
@@ -246,15 +246,15 @@ class EventHandler:
             return False
     
     async def _kick_user(self, group_id: str, user_id: str, event: AstrMessageEvent = None, context = None) -> bool:
-        """统一踢人方法
+        """Unified kick method.
         
-        尝试使用多种方式踢人：
-        1. event.bot.set_group_kick (推荐)
+        Try multiple ways to kick:
+        1. event.bot.set_group_kick (recommended)
         2. context.set_group_kick
         3. context.kick_group_member
         
         Returns:
-            bool: 是否成功踢出
+            bool: Whether kick was successful.
         """
         try:
             if event and hasattr(event, 'bot') and hasattr(event.bot, 'set_group_kick'):
@@ -278,7 +278,7 @@ class EventHandler:
             return False
     
     async def _handle_bot_join(self, group_id: str, context) -> bool:
-        """处理Bot加入群聊事件"""
+        """Handle bot join group event."""
         if not self.service.is_group_blacklisted(group_id):
             return False
         
@@ -290,7 +290,7 @@ class EventHandler:
         return await self._quit_group_if_possible(group_id, context)
     
     async def _get_user_group_role(self, event: AstrMessageEvent, group_id: str, user_id: str) -> Optional[str]:
-        """获取用户在群组中的角色（owner/admin/member）"""
+        """Get user's role in group (owner/admin/member)."""
         bot = getattr(event, 'bot', None)
         if not bot or not hasattr(bot, 'api') or not hasattr(bot.api, 'call_action'):
             return None
@@ -307,7 +307,7 @@ class EventHandler:
             return None
     
     async def _quit_group_if_possible(self, group_id: str, context) -> bool:
-        """尝试退出群组，带防重入和错误处理"""
+        """Try to leave group, with re-entry prevention and error handling."""
         if group_id in self.quit_groups:
             self.logger.debug(f"Already quit group, ignoring | Group: {group_id}")
             return True
@@ -326,11 +326,11 @@ class EventHandler:
         return False
     
     async def _handle_member_join(self, group_id: str, user_id: str, event: AstrMessageEvent, context) -> bool:
-        """处理普通成员加入群聊事件
+        """Handle regular member join group event.
         
-        1. 黑名单用户为群主/管理员 → Bot自动退群
-        2. 黑名单用户等级≥3且Bot有权限 → 踢出
-        3. 黑名单用户等级<3 或 无权限 → 仅记录日志
+        1. Blacklisted user is group owner/admin -> bot leaves group
+        2. Blacklisted user level >= 3 and bot has permission -> kick
+        3. Blacklisted user level < 3 or no permission -> log only
         """
         if not self.service.is_user_blacklisted(user_id):
             return False
@@ -365,26 +365,29 @@ class EventHandler:
         
         return kicked
     
-    async def _check_kick_permission(self, event: AstrMessageEvent, group_id: str, user_id: str, fallback: bool = False) -> bool:
-        """检查 Bot 是否有权限踢出对方
-
+    async def _check_kick_permission(self, event: AstrMessageEvent, group_id: str, user_id: str, fallback: bool = True) -> bool:
+        """Check if bot has permission to kick user.
+        
         Args:
-            fallback: 当API调用失败时是否允许降级踢人（跳过权限检查）
-
-        返回 True 表示可以踢出，False 表示不能踢出
-        检查逻辑：
-        1. Bot 必须是管理员或群主
-        2. 对方不能是管理员或群主
-
-        默认 fallback=False 以保证安全：无法确认权限时拒绝踢人。
+            event: The message event.
+            group_id: Group ID.
+            user_id: User ID to kick.
+            fallback: Whether to allow degraded kick when API call fails.
+            
+        Returns:
+            True if can kick, False if cannot kick.
+            
+        Check logic:
+        1. Bot must be admin or owner
+        2. Target cannot be admin or owner
         """
         bot = getattr(event, 'bot', None)
         if not bot:
-            self.logger.warning(f"无法获取 Bot 实例")
+            self.logger.warning(f"Failed to get bot instance")
             return fallback
 
         if not hasattr(bot, 'api') or not hasattr(bot.api, 'call_action'):
-            self.logger.warning(f"Bot 不支持 API 调用")
+            self.logger.warning(f"Bot does not support API calls")
             return fallback
 
         bot_id = None
@@ -398,7 +401,7 @@ class EventHandler:
             bot_id = getattr(bot, 'self_id', None)
 
         if not bot_id:
-            self.logger.warning(f"无法获取 Bot ID | Group: {group_id}")
+            self.logger.warning(f"Failed to get bot ID | Group: {group_id}")
             return fallback
 
         try:
@@ -415,18 +418,18 @@ class EventHandler:
                 no_cache=True
             )
         except Exception as e:
-            self.logger.warning(f"群成员信息获取失败，拒绝踢人: {type(e).__name__}: {str(e)} | Group: {group_id} | User: {user_id}")
+            self.logger.warning(f"Failed to get group member info, trying degraded kick: {type(e).__name__}: {str(e)} | Group: {group_id} | User: {user_id}")
             return fallback
 
         bot_role = bot_info.get("role", "member")
         user_role = user_info.get("role", "member")
 
         if bot_role not in ["admin", "owner"]:
-            self.logger.warning(f"Bot 不是管理员，无法踢人 | Bot: {bot_id} | Role: {bot_role} | Group: {group_id}")
+            self.logger.warning(f"Bot is not admin, cannot kick | Bot: {bot_id} | Role: {bot_role} | Group: {group_id}")
             return False
 
         if user_role in ["admin", "owner"]:
-            self.logger.warning(f"对方是管理员/群主，无法踢出 | User: {user_id} | Role: {user_role} | Group: {group_id}")
+            self.logger.warning(f"Target is admin/owner, cannot kick | User: {user_id} | Role: {user_role} | Group: {group_id}")
             return False
 
         return True

@@ -30,27 +30,27 @@ class PimengAPI:
             self._ssl_context = ssl.create_default_context()
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """获取或创建aiohttp会话（复用连接）"""
+        """Get or create aiohttp session (reuse connection)."""
         if self._session is None or self._session.closed:
             timeout = aiohttp.ClientTimeout(total=self.request_timeout)
             self._session = aiohttp.ClientSession(timeout=timeout)
         return self._session
     
     async def terminate(self):
-        """关闭aiohttp会话"""
+        """Close aiohttp session."""
         if self._session and not self._session.closed:
             await self._session.close()
             self._session = None
     
     async def check_blacklist(self, user_id: str, user_type: str = "user") -> dict:
-        """检查用户/群组是否在黑名单中"""
+        """Check if user/group is in blacklist."""
         return await self._make_request("POST", "/api/bot/check", {
             "user_id": user_id,
             "user_type": user_type
         })
     
     async def add_to_blacklist(self, user_id: str, user_type: str, reason: str, level: int) -> dict:
-        """添加到黑名单"""
+        """Add to blacklist."""
         return await self._make_request("POST", "/api/bot/add", {
             "user_id": user_id,
             "user_type": user_type,
@@ -59,7 +59,7 @@ class PimengAPI:
         })
     
     async def remove_from_blacklist(self, user_id: str, user_type: str, reason: str) -> dict:
-        """从黑名单移除"""
+        """Remove from blacklist."""
         return await self._make_request("POST", "/api/bot/delete", {
             "user_id": user_id,
             "user_type": user_type,
@@ -67,11 +67,11 @@ class PimengAPI:
         })
     
     async def get_blacklist(self) -> dict:
-        """获取黑名单列表"""
+        """Get blacklist."""
         return await self._make_request("GET", "/api/bot/getlist")
     
     async def _make_request(self, method: str, endpoint: str, data: dict = None) -> dict:
-        """发送API请求（带智能重试）"""
+        """Send API request (with smart retry)."""
         max_retries = 2
         retry_delay = 1
         
@@ -93,17 +93,17 @@ class PimengAPI:
         return result
     
     def _should_retry(self, error_message: str, attempt: int, max_retries: int) -> bool:
-        """判断是否应该重试
+        """Determine if should retry.
         
-        只重试可恢复的错误：
-        - 网络错误（超时、连接错误等）
-        - 5xx服务器错误
-        - 某些4xx错误（如429 Too Many Requests）
+        Only retry recoverable errors:
+        - Network errors (timeout, connection errors, etc.)
+        - 5xx server errors
+        - Some 4xx errors (e.g., 429 Too Many Requests)
         
-        不重试：
-        - 认证错误（401, 403）
-        - 客户端错误（400 Bad Request）
-        - 资源不存在（404）
+        Do not retry:
+        - Authentication errors (401, 403)
+        - Client errors (400 Bad Request)
+        - Resource not found (404)
         """
         if attempt >= max_retries - 1:
             return False
@@ -128,7 +128,7 @@ class PimengAPI:
         return False
     
     async def _make_async_request(self, method: str, endpoint: str, data: dict = None) -> dict:
-        """异步HTTP请求（使用复用的aiohttp会话）"""
+        """Async HTTP request (using reused aiohttp session)."""
         base_path = self.base_path.rstrip("/")
         endpoint = endpoint.lstrip("/")
         path = f"/{base_path}/{endpoint}" if base_path else f"/{endpoint}"
@@ -136,7 +136,7 @@ class PimengAPI:
         
         headers = {
             "Authorization": self.bot_token if self.bot_token else "",
-            "User-Agent": "PimengBlacklist/2.8.1",
+            "User-Agent": "PimengBlacklist/2.9.2",
             "Accept": "application/json",
         }
         
@@ -167,7 +167,7 @@ class PimengAPI:
             return {"success": False, "message": "内部错误，请查看日志"}
     
     async def _handle_response(self, response: aiohttp.ClientResponse) -> dict:
-        """处理HTTP响应"""
+        """Handle HTTP response."""
         try:
             response_data = await response.text()
             
