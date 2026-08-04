@@ -89,24 +89,20 @@ class BlacklistService:
     
     async def _sync_blacklist_internal(self, force: bool = False) -> bool:
         if not self.api.bot_token:
+            self.logger.warning("未配置Bot Token，跳过同步")
             return False
-        
+
         if not force and self.last_sync:
             time_since_last_sync = datetime.now() - self.last_sync
             if time_since_last_sync.total_seconds() < 60:
                 self.logger.debug(f"同步冷却中，上次同步于 {self.last_sync.strftime('%H:%M:%S')}，{int(60 - time_since_last_sync.total_seconds())}秒后可同步")
                 return False
-        
+
         old_user_blacklist = self.user_blacklist.copy()
         old_group_blacklist = self.group_blacklist.copy()
-        
+
         try:
-            if self.api.bot_token:
-                token_length = len(self.api.bot_token)
-                self.logger.debug(f"开始同步，Token已配置（长度: {token_length}）")
-            else:
-                self.logger.warning("未配置Bot Token，跳过同步")
-                return False
+            self.logger.debug(f"开始同步，Token已配置（长度: {len(self.api.bot_token)}）")
             result = await self.api.get_blacklist()
             
             if not result.get("success"):

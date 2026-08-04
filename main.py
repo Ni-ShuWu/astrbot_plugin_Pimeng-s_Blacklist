@@ -254,11 +254,12 @@ class PimengBlacklistPlugin(Star):
         target_id = str(target or event.get_sender_id())
         
         if user_type is None:
-            results = []
             query_user_id = str(event.get_sender_id())
-            
-            can_query = self.service.can_query_api(query_user_id)
-            
+
+            if not self.service.can_query_api(query_user_id):
+                yield event.plain_result("⏳ 查询限流中，请稍后再试")
+                return
+
             user_result = await self._query_blacklist(target_id, "user", check_rate_limit=False)
             group_result = await self._query_blacklist(target_id, "group", check_rate_limit=False)
             

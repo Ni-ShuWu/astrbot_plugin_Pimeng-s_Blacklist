@@ -38,8 +38,12 @@ class EventHandler:
         if self.service.is_user_blacklisted(user_id):
             user_data = self.service.get_user_data(user_id)
             level = user_data.get("level", 1) if user_data else 1
-            
+
             if not is_group:
+                # 1级不进行拦截输出，直接放行
+                if level <= 1:
+                    return None
+
                 now = datetime.now()
                 last_warn = self.cache.get_private_warn_time(user_id)
                 
@@ -53,9 +57,9 @@ class EventHandler:
                         should_warn = True
                         self.cache.set_private_warn_time(user_id, now)
                         self.logger.info(f"Private Warn | User: {user_id} | Level: {level}")
-                
+
                 event.stop_event()
-                
+
                 if should_warn:
                     return (
                         f"⚠️ You are blacklisted.\n"
@@ -65,7 +69,7 @@ class EventHandler:
                         f"━━━━━━━━━━━━━━\n"
                         f"Details & appeal: https://云黑.皮梦.wtf"
                     )
-                
+
                 return None
         
         if is_group:
@@ -91,7 +95,7 @@ class EventHandler:
                 
                 if self.enable_auto_kick and user_level >= 3:
                     can_kick = await self._check_kick_permission(event, group_id, user_id)
-                    
+
                     if can_kick:
                         kicked = await self._kick_user(group_id, user_id, event, context)
                         if kicked:
@@ -103,7 +107,11 @@ class EventHandler:
                                 f"Level: {user_level}\n"
                                 f"Reason: {reason}{added_by_line}"
                             )
-                
+
+                # 1级不进行拦截输出，2~4级才拦截并提示
+                if user_level <= 1:
+                    return None
+
                 if is_wake_up and self.enable_message_intercept:
                     event.stop_event()
                     self.logger.info(f"Intercepted blacklisted user | User: {user_id} | Level: {user_level} | Group: {group_id}")
@@ -377,25 +385,25 @@ class EventHandler:
         if not bot:
             self.logger.warning(f"Failed to get bot instance")
             return fallback
-        
+
         if not hasattr(bot, 'api') or not hasattr(bot.api, 'call_action'):
             self.logger.warning(f"Bot does not support API calls")
             return fallback
-        
+
         bot_id = None
         if hasattr(event, 'message_obj') and hasattr(event.message_obj, 'self_id'):
             bot_id = event.message_obj.self_id
-        
+
         if not bot_id:
             bot_id = getattr(event, 'self_id', None)
-        
+
         if not bot_id and hasattr(bot, 'self_id'):
             bot_id = getattr(bot, 'self_id', None)
-        
+
         if not bot_id:
             self.logger.warning(f"Failed to get bot ID | Group: {group_id}")
             return fallback
-        
+
         try:
             bot_info = await bot.api.call_action(
                 'get_group_member_info',
@@ -412,16 +420,16 @@ class EventHandler:
         except Exception as e:
             self.logger.warning(f"Failed to get group member info, trying degraded kick: {type(e).__name__}: {str(e)} | Group: {group_id} | User: {user_id}")
             return fallback
-        
+
         bot_role = bot_info.get("role", "member")
         user_role = user_info.get("role", "member")
-        
+
         if bot_role not in ["admin", "owner"]:
             self.logger.warning(f"Bot is not admin, cannot kick | Bot: {bot_id} | Role: {bot_role} | Group: {group_id}")
             return False
-        
+
         if user_role in ["admin", "owner"]:
             self.logger.warning(f"Target is admin/owner, cannot kick | User: {user_id} | Role: {user_role} | Group: {group_id}")
             return False
-        
+
         return True
