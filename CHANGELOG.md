@@ -1,4 +1,5 @@
 # 版本历史
+- v3.0.0：与 **AI 审核插件**（`astrbot_plugin_ai_review`）实现双向通信（AstrBot 插件实例互调）。AI 审核通过 `context.get_all_stars()` 发现本插件 `star_cls` 实例并直接调用其接口：`api.add_to_blacklist` 同步拉黑（AI 审核 → 皮梦云）；`service.get_user_data` / `api.check_blacklist` 审核前查询云黑库以加重判定（皮梦云 → AI 审核）。插件未加载时自动跳过（弱依赖），本插件侧接口保持不变、无功能代码改动；版本号同步更新至 3.0.0
 - v2.9.2：按照 AstrBot 母项目规范优化代码；中文注释/日志转英语；docstrings 更新为 Google 风格；版本号统一
 - v2.9.1：优化文案描述；版本号更新
 - v2.9.0：踢人/拦截消息显示「添加者」；user/group 参数支持中文别名（用户/群组）和短参数（-u/-g）；重写 README 文档

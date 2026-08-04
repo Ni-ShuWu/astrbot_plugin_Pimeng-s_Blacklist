@@ -12,7 +12,7 @@ from .cache import BlacklistCache
 from .service import BlacklistService
 from .handler import EventHandler
 
-__version__ = "2.9.2"
+__version__ = "3.0.0"
 
 # Constants
 LEVEL_NAMES = {1: "Minor", 2: "Moderate", 3: "Platform", 4: "Severe"}
