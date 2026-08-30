@@ -42,5 +42,29 @@
     "description": "API 请求超时（秒）",
     "hint": "API 请求的超时时间，建议 10 秒",
     "default": 10
+  },
+  "enable_report_on_mute": {
+    "type": "bool",
+    "description": "Bot被禁言自动上报",
+    "hint": "Bot在群内被禁言超过阈值时，自动将该群和执行禁言的管理员同步至云黑库",
+    "default": true
+  },
+  "mute_threshold_minutes": {
+    "type": "int",
+    "description": "禁言上报阈值（分钟）",
+    "hint": "Bot被禁言时长达到该阈值才触发上报，建议 10 分钟",
+    "default": 10
+  },
+  "enable_report_on_kick": {
+    "type": "bool",
+    "description": "Bot被踢出群自动上报",
+    "hint": "Bot被踢出群聊时，自动将该群和执行踢出的管理员同步至云黑库",
+    "default": true
+  },
+  "report_level": {
+    "type": "int",
+    "description": "自动上报黑名单等级",
+    "hint": "自动上报（禁言/踢出）使用的黑名单等级，1-轻微 2-一般 3-平台",
+    "default": 3
   }
 }

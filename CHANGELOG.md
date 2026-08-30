@@ -1,4 +1,5 @@
 # 版本历史
+- v3.1.0：新增**防御性自动上报**：Bot 在群内被禁言超过配置阈值（分钟）时，自动将该群和执行禁言的管理员同步至云黑库；Bot 被踢出群时，自动将该群和执行踢出的管理员同步至云黑库。新增 4 项配置（`enable_report_on_mute`、`mute_threshold_minutes`、`enable_report_on_kick`、`report_level`），上报走后台任务、600 秒冷却去重、异常隔离不影响主流程；新模块 `notice.py`
 - v3.0.0：与 **AI 审核插件**（`astrbot_plugin_ai_review`）实现双向通信（AstrBot 插件实例互调）。AI 审核通过 `context.get_all_stars()` 发现本插件 `star_cls` 实例并直接调用其接口：`api.add_to_blacklist` 同步拉黑（AI 审核 → 皮梦云）；`service.get_user_data` / `api.check_blacklist` 审核前查询云黑库以加重判定（皮梦云 → AI 审核）。插件未加载时自动跳过（弱依赖），本插件侧接口保持不变、无功能代码改动；版本号同步更新至 3.0.0
 - v2.9.2：按照 AstrBot 母项目规范优化代码；中文注释/日志转英语；docstrings 更新为 Google 风格；版本号统一
 - v2.9.1：优化文案描述；版本号更新

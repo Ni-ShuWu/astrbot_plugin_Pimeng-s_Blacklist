@@ -16,6 +16,12 @@
 - **自动踢人**：等级 ≥ 3 的黑名单用户在群内踢出（可开关）
 - **消息拦截**：黑名单用户与 Bot 互动时拦截并提醒（可开关）
 
+### 防御性自动上报（v3.1.0）
+- **禁言自动上报**：Bot 在群内被禁言且时长达到阈值（分钟，可配置）时，自动将该群和执行禁言的管理员同步至云黑库（可开关）
+- **踢出自动上报**：Bot 被踢出群聊时，自动将该群和执行踢出的管理员同步至云黑库（可开关）
+- **冷却去重**：同一（事件类型，群，管理员）600 秒内仅上报一次，防止事件风暴
+- **异常隔离**：上报走后台任务，失败仅记录日志，不影响消息处理主流程
+
 ### 权限安全
 - **管理员鉴权**：使用 AstrBot 内置管理员系统，无需单独配置 OP 列表
 - **Token 鉴权**：敏感操作需要皮梦云 Token
@@ -51,6 +57,10 @@ pimeng_blacklist:
   enable_quit_on_admin_join: true            # 黑名单管理员进群时 Bot 退群
   enable_message_intercept: true             # 黑名单用户与 Bot 互动时拦截提醒
   request_timeout: 10                        # API 请求超时（秒），1~30
+  enable_report_on_mute: true                # Bot被禁言超阈值时自动上报群+管理员
+  mute_threshold_minutes: 10                 # 禁言上报阈值（分钟）
+  enable_report_on_kick: true                # Bot被踢出群时自动上报群+管理员
+  report_level: 3                            # 自动上报使用的黑名单等级（1~3）
 ```
 
 ### 配置项说明
@@ -64,6 +74,10 @@ pimeng_blacklist:
 | `enable_quit_on_admin_join` | bool | true | 黑名单管理员进群时 Bot 退群 |
 | `enable_message_intercept` | bool | true | 群聊中仅黑名单用户与 Bot 互动时拦截提醒 |
 | `request_timeout` | int | 10 | API 请求超时（秒），范围 1~30 |
+| `enable_report_on_mute` | bool | true | Bot 被禁言超过阈值时自动上报群和管理员至云黑库 |
+| `mute_threshold_minutes` | int | 10 | 禁言上报阈值（分钟），用户可自行调节 |
+| `enable_report_on_kick` | bool | true | Bot 被踢出群时自动上报群和管理员至云黑库 |
+| `report_level` | int | 3 | 自动上报使用的黑名单等级，1~3（等级 4 需面板操作） |
 
 ## 命令
 
