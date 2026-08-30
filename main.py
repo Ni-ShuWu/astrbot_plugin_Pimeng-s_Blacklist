@@ -11,8 +11,9 @@ from .api import PimengAPI
 from .cache import BlacklistCache
 from .service import BlacklistService
 from .handler import EventHandler
+from .notice import NoticeHandler
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 
 # Constants
 LEVEL_NAMES = {1: "Minor", 2: "Moderate", 3: "Platform", 4: "Severe"}
@@ -64,11 +65,18 @@ class PimengBlacklistPlugin(Star):
         enable_message_intercept = config.get("enable_message_intercept", True)
         request_timeout = max(1, min(config.get("request_timeout", 10), 30))
         
+        # Notice report configuration
+        enable_report_on_mute = config.get("enable_report_on_mute", True)
+        mute_threshold_minutes = max(1, min(config.get("mute_threshold_minutes", 10), 43200))
+        enable_report_on_kick = config.get("enable_report_on_kick", True)
+        report_level = config.get("report_level", 3)
+        
         # Initialize modules
         self.api = PimengAPI(api_base, bot_token, request_timeout, self.logger)
         self.cache = BlacklistCache()
         self.service = BlacklistService(self.api, self.cache, sync_interval, self.logger)
         self.handler = EventHandler(self.service, self.cache, enable_auto_kick, enable_quit_on_admin_join, enable_message_intercept, self.logger)
+        self.notice_handler = NoticeHandler(self.api, enable_report_on_mute, mute_threshold_minutes, enable_report_on_kick, report_level, self.logger)
     
     async def initialize(self):
         """Initialize the plugin."""
@@ -192,8 +200,21 @@ class PimengBlacklistPlugin(Star):
     
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     async def on_member_join(self, event: AstrMessageEvent):
-        """Handle member join group event."""
+        """Handle member join group event and bot mute/kick notices."""
+        task = asyncio.create_task(self._safe_handle_notice(event))
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        
         await self.handler.handle_member_join(event, self.context)
+    
+    async def _safe_handle_notice(self, event: AstrMessageEvent):
+        """Safely handle bot mute/kick notices (wrap async task, catch exceptions)."""
+        try:
+            desc = await self.notice_handler.handle_notice(event)
+            if desc:
+                self.logger.info(f"Notice reported to cloud blacklist | {desc}")
+        except Exception as e:
+            self.logger.error(f"Notice handling failed: {type(e).__name__}: {e}")
     
     def _check_op(self, event: AstrMessageEvent) -> bool:
         """Check if user is admin."""
