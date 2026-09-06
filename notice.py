@@ -10,6 +10,9 @@ from .api import PimengAPI
 
 REPORT_COOLDOWN_SECONDS = 600
 
+# 全员禁言时 user_id 的常见取值（OneBot/NapCat 为 0，部分实现为 2558217306）
+WHOLE_GROUP_BAN_USER_IDS = {"0", "2558217306"}
+
 
 class NoticeHandler:
     """群 notice 事件处理器。
@@ -67,8 +70,11 @@ class NoticeHandler:
                 return None
             if not self.enable_report_on_mute:
                 return None
-            # user_id 是被禁言者，仅当 Bot 被禁言时触发
-            if str(notice.get("user_id", "")) != bot_id:
+            # user_id 是被禁言者，仅当 Bot 被禁言时触发；全员禁言（user_id 为约定值）不触发
+            muted_id = str(notice.get("user_id", ""))
+            if muted_id != bot_id:
+                return None
+            if muted_id in WHOLE_GROUP_BAN_USER_IDS:
                 return None
             duration = int(notice.get("duration", 0) or 0)
             if duration < self.mute_threshold_seconds:
